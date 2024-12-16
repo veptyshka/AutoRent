@@ -146,8 +146,25 @@ class Program
     {
         DbSetup.InitDb();
 
+        // Adding some cars
         AddCar("Model 1", 10.5, 0.5);
         AddCar("Model 2", 12.0, 0.5);
         AddCar("Model 3", 15.0, 0.8);
+
+        // Registering clients
+        RegisterClient("Argus Filch", "argusfilch@gmail.com");
+        RegisterClient("Gandalf the Gray", "youshallnotpass@gmail.com");
+
+        // Registering rentals
+        RentRegister(
+            clientID: 1, carID: 2,
+            startTime: DateTime.Now.AddHours(-2),
+            endTime: DateTime.Now,
+            kmDriven: 123);
+        RentRegister(
+            clientID: 2, carID: 3,
+            startTime: DateTime.Now.AddHours(-24),
+            endTime: DateTime.Now,
+            kmDriven: 2000);        // He had driven to Shire and back
     }
 }
