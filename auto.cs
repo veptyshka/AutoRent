@@ -112,5 +112,8 @@ public static void RentRegister(int clientID, int carID, DateTime startTime, Dat
         connection.Open();
         var getCarRatesCommand = connection.CreateCommand();
         getCarRatesCommand.CommandText = "SELECT HourRate, KmRate FROM Cars WHERE ID = @CarID;";
+        getCarRatesCommand.Parameters.AddWithValue("@CarID", carID);
+        var reader = getCarRatesCommand.ExecuteReader();
+        if (!reader.Read()) throw new Exception("Car not found");
     }
 }
