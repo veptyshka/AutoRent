@@ -1,7 +1,9 @@
 using System;
 using Microsoft.Data.Sqlite;
+using Microsoft.Data.SqlClient;
 
-class DbSetup 
+// Database setup
+class DbSetup
 {
     public static void InitDb()
     {
@@ -33,6 +35,82 @@ class DbSetup
             TotalPay REAL,
             FOREIGN KEY(Client ID) REFERENCES Clients(ID),
             FOREIGN KEY(Car ID) REFERENCES Cars(ID));";
+
+            var command = connection.CreateCommand();
+            command.CommandText = createCarsTable + createClientsTable + createRentalsTable;
+            command.ExecuteNonQuery();
+
+            Console.WriteLine("DataBase and tables created succesfully");
         }
+    }
+}
+
+public class Car        // Car class
+{
+    public int ID { get; set; }
+    public string Model { get; set; }
+    public double HourRate { get; set; }
+    public double KmRate { get; set; }
+}
+
+public class Client     // Client class
+{
+    public int ID { get; set; }
+    public string FullName { get; set; }
+    public string Email { get; set; }
+}
+
+public class Rental     // Rental class
+{
+    public int ID { get; set; }
+    public int ClientID { get; set; }
+    public int CarID { get; set; }
+    public DateTime StartTime { get; set; }
+    public DateTime EndTime { get; set; }
+    public double KmDriven { get; set; }
+    public double TotalPay { get; set; }
+}
+
+// Client register
+public static void RegisterClient(string fullName, string email)
+{
+    using (var connection = new SqliteConnection("Data Source=car_rent.db;Version=3;"))
+    {
+        connection.Open();
+        var command = connection.CreateCommand();
+        command.CommandText = "INSERT INTO Clients (FullName, Email) VALUES (@FullName, @Email);";
+        command.Parameters.AddWithValue("@FullName", fullName);
+        command.Parameters.AddWithValue("@Email", email);
+        command.ExecuteNonQuery();
+
+        Console.WriteLine("Client registered succesfully");
+    }
+}
+
+// Auto register
+public static void AddCar(string model, double hourlyRate, double kmRate)
+{
+    using (var connection = new SqliteConnection("Data Source=car_rent.db;Version=3;"))
+    {
+        connection.Open();
+        var command = connection.CreateCommand();
+        command.CommandText = "INSERT INTO Cars (Model, HourRate, KmRate) VALUES (@Model, @HourRate, @KmRate);";
+        command.Parameters.AddWithValue("@Model", model);
+        command.Parameters.AddWithValue("@HourRate", hourlyRate);
+        command.Parameters.AddWithValue("@KmRate", kmRate);
+        command.ExecuteNonQuery();
+
+        Console.WriteLine("Car added succesfully");
+    }
+}
+
+// Car rental
+public static void RentRegister(int clientID, int carID, DateTime startTime, DateTime endTime, double kmDriven)
+{
+    using (var connection = new SqliteConnection("Data Source=car_rent.db;Version=3;"))
+    {
+        connection.Open();
+        var getCarRatesCommand = connection.CreateCommand();
+        getCarRatesCommand.CommandText = "SELECT HourRate, KmRate FROM Cars WHERE ID = @CarID;";
     }
 }
