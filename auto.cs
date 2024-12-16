@@ -115,5 +115,39 @@ public static void RentRegister(int clientID, int carID, DateTime startTime, Dat
         getCarRatesCommand.Parameters.AddWithValue("@CarID", carID);
         var reader = getCarRatesCommand.ExecuteReader();
         if (!reader.Read()) throw new Exception("Car not found");
+
+        double hourlyRate = reader.GetDouble(0);
+        double kmRate = reader.GetDouble(1);
+
+        // Calculating payment
+        double rentHours = (endTime - startTime).TotalHours;
+        double totalPay = (rentHours * hourlyRate) + (kmDriven * kmRate);
+
+        // Saving rental into db
+        var insertRentCommand = connection.CreateCommand();
+        insertRentCommand.CommandText = 
+        @"INSERT INTO Rentals (ClientID, CarID, StartTime, EndTime, KmDriven, TotalPay)
+        VALUES (@ClientID, @CarID, @StartTime, @EndTime, @KmDriven, @TotalPay);";
+        insertRentCommand.Parameters.AddWithValue("@ClientID", clientID);
+        insertRentCommand.Parameters.AddWithValue("@CarID", carID);
+        insertRentCommand.Parameters.AddWithValue("@StartTime", startTime);
+        insertRentCommand.Parameters.AddWithValue("@EndTime", endTime);
+        insertRentCommand.Parameters.AddWithValue("@KmDriven", kmDriven);
+        insertRentCommand.Parameters.AddWithValue("@ToTalPay", totalPay);
+        insertRentCommand.ExecuteNonQuery();
+
+        Console.WriteLine($"Rental registered, total payment: {totalPay:C}");
+    }
+}
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        DbSetup.InitDb();
+
+        AddCar("Model 1", 10.5, 0.5);
+        AddCar("Model 2", 12.0, 0.5);
+        AddCar("Model 3", 15.0, 0.8);
     }
 }
