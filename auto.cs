@@ -51,6 +51,23 @@ public class Car        // Car class
     public string Model { get; set; }
     public double HourRate { get; set; }
     public double KmRate { get; set; }
+
+    // Auto register
+    public static void AddCar(string model, double hourlyRate, double kmRate)
+    {
+        using (var connection = new SqliteConnection("Data Source=car_rent.db;Version=3;"))
+        {
+            connection.Open();
+            var command = connection.CreateCommand();
+            command.CommandText = "INSERT INTO Cars (Model, HourRate, KmRate) VALUES (@Model, @HourRate, @KmRate);";
+            command.Parameters.AddWithValue("@Model", model);
+            command.Parameters.AddWithValue("@HourRate", hourlyRate);
+            command.Parameters.AddWithValue("@KmRate", kmRate);
+            command.ExecuteNonQuery();
+
+            Console.WriteLine("Car added succesfully");
+        }
+    }
 }
 
 public class Client     // Client class
@@ -58,6 +75,22 @@ public class Client     // Client class
     public int ID { get; set; }
     public string FullName { get; set; }
     public string Email { get; set; }
+
+    // Client register
+    public static void RegisterClient(string fullName, string email)
+    {
+        using (var connection = new SqliteConnection("Data Source=car_rent.db;Version=3;"))
+        {
+            connection.Open();
+            var command = connection.CreateCommand();
+            command.CommandText = "INSERT INTO Clients (FullName, Email) VALUES (@FullName, @Email);";
+            command.Parameters.AddWithValue("@FullName", fullName);
+            command.Parameters.AddWithValue("@Email", email);
+            command.ExecuteNonQuery();
+
+            Console.WriteLine("Client registered succesfully");
+        }
+    }
 }
 
 public class Rental     // Rental class
@@ -69,74 +102,41 @@ public class Rental     // Rental class
     public DateTime EndTime { get; set; }
     public double KmDriven { get; set; }
     public double TotalPay { get; set; }
-}
 
-// Client register
-public static void RegisterClient(string fullName, string email)
-{
-    using (var connection = new SqliteConnection("Data Source=car_rent.db;Version=3;"))
+    // Car rental
+    public static void RentRegister(int clientID, int carID, DateTime startTime, DateTime endTime, double kmDriven)
     {
-        connection.Open();
-        var command = connection.CreateCommand();
-        command.CommandText = "INSERT INTO Clients (FullName, Email) VALUES (@FullName, @Email);";
-        command.Parameters.AddWithValue("@FullName", fullName);
-        command.Parameters.AddWithValue("@Email", email);
-        command.ExecuteNonQuery();
+        using (var connection = new SqliteConnection("Data Source=car_rent.db;Version=3;"))
+        {
+            connection.Open();
+            var getCarRatesCommand = connection.CreateCommand();
+            getCarRatesCommand.CommandText = "SELECT HourRate, KmRate FROM Cars WHERE ID = @CarID;";
+            getCarRatesCommand.Parameters.AddWithValue("@CarID", carID);
+            var reader = getCarRatesCommand.ExecuteReader();
+            if (!reader.Read()) throw new Exception("Car not found");
 
-        Console.WriteLine("Client registered succesfully");
-    }
-}
+            double hourlyRate = reader.GetDouble(0);
+            double kmRate = reader.GetDouble(1);
 
-// Auto register
-public static void AddCar(string model, double hourlyRate, double kmRate)
-{
-    using (var connection = new SqliteConnection("Data Source=car_rent.db;Version=3;"))
-    {
-        connection.Open();
-        var command = connection.CreateCommand();
-        command.CommandText = "INSERT INTO Cars (Model, HourRate, KmRate) VALUES (@Model, @HourRate, @KmRate);";
-        command.Parameters.AddWithValue("@Model", model);
-        command.Parameters.AddWithValue("@HourRate", hourlyRate);
-        command.Parameters.AddWithValue("@KmRate", kmRate);
-        command.ExecuteNonQuery();
+            // Calculating payment
+            double rentHours = (endTime - startTime).TotalHours;
+            double totalPay = (rentHours * hourlyRate) + (kmDriven * kmRate);
 
-        Console.WriteLine("Car added succesfully");
-    }
-}
+            // Saving rental into db
+            var insertRentCommand = connection.CreateCommand();
+            insertRentCommand.CommandText = 
+            @"INSERT INTO Rentals (ClientID, CarID, StartTime, EndTime, KmDriven, TotalPay)
+            VALUES (@ClientID, @CarID, @StartTime, @EndTime, @KmDriven, @TotalPay);";
+            insertRentCommand.Parameters.AddWithValue("@ClientID", clientID);
+            insertRentCommand.Parameters.AddWithValue("@CarID", carID);
+            insertRentCommand.Parameters.AddWithValue("@StartTime", startTime);
+            insertRentCommand.Parameters.AddWithValue("@EndTime", endTime);
+            insertRentCommand.Parameters.AddWithValue("@KmDriven", kmDriven);
+            insertRentCommand.Parameters.AddWithValue("@ToTalPay", totalPay);
+            insertRentCommand.ExecuteNonQuery();
 
-// Car rental
-public static void RentRegister(int clientID, int carID, DateTime startTime, DateTime endTime, double kmDriven)
-{
-    using (var connection = new SqliteConnection("Data Source=car_rent.db;Version=3;"))
-    {
-        connection.Open();
-        var getCarRatesCommand = connection.CreateCommand();
-        getCarRatesCommand.CommandText = "SELECT HourRate, KmRate FROM Cars WHERE ID = @CarID;";
-        getCarRatesCommand.Parameters.AddWithValue("@CarID", carID);
-        var reader = getCarRatesCommand.ExecuteReader();
-        if (!reader.Read()) throw new Exception("Car not found");
-
-        double hourlyRate = reader.GetDouble(0);
-        double kmRate = reader.GetDouble(1);
-
-        // Calculating payment
-        double rentHours = (endTime - startTime).TotalHours;
-        double totalPay = (rentHours * hourlyRate) + (kmDriven * kmRate);
-
-        // Saving rental into db
-        var insertRentCommand = connection.CreateCommand();
-        insertRentCommand.CommandText = 
-        @"INSERT INTO Rentals (ClientID, CarID, StartTime, EndTime, KmDriven, TotalPay)
-        VALUES (@ClientID, @CarID, @StartTime, @EndTime, @KmDriven, @TotalPay);";
-        insertRentCommand.Parameters.AddWithValue("@ClientID", clientID);
-        insertRentCommand.Parameters.AddWithValue("@CarID", carID);
-        insertRentCommand.Parameters.AddWithValue("@StartTime", startTime);
-        insertRentCommand.Parameters.AddWithValue("@EndTime", endTime);
-        insertRentCommand.Parameters.AddWithValue("@KmDriven", kmDriven);
-        insertRentCommand.Parameters.AddWithValue("@ToTalPay", totalPay);
-        insertRentCommand.ExecuteNonQuery();
-
-        Console.WriteLine($"Rental registered, total payment: {totalPay:C}");
+            Console.WriteLine($"Rental registered, total payment: {totalPay:C}");
+        }
     }
 }
 
